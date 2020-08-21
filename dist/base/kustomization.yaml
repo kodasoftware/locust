@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: default
+resources:
+  - deployment.yaml
+  - service.yaml
+configMapGenerator:
+  - name: locustfile-config
+    files:
+      - scripts/arango-locustfile.py
+      - scripts/locustfile.py
+      - scripts/dneg-locustfile.py
+      - scripts/dneg-stardog-locustfile.py
+
+images:
+  - name: gcr.io/sauce-gcr--hawk/locust
+    newTag: 0.2.2

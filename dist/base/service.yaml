@@ -1,0 +1,27 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: locust
+  labels:
+    app: locust
+  annotations:
+    # Comment out the backend config below to revoke it if deployed into a cluster
+    beta.cloud.google.com/backend-config: '{"default":"locust-http"}'
+    cloud.google.com/app-protocols: '{"locust-http":"HTTP"}'
+spec:
+  selector:
+    app: locust-master
+  type: NodePort
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8089
+    - name: locust-http
+      port: 8089
+      targetPort: 8089
+    - name: master
+      port: 5557
+      targetPort: 5557
+    - name: master-2
+      port: 5558
+      targetPort: 5558

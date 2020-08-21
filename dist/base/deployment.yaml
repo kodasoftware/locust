@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: locust-master
+  labels:
+    app: locust
+spec:
+  selector:
+    matchLabels:
+      app: locust-master
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: locust-master
+    spec:
+      containers:
+        - name: locust-master
+          image: gcr.io/sauce-gcr--hawk/locust
+          imagePullPolicy: Always
+          livenessProbe:
+            exec:
+              command:
+              - ls
+            initialDelaySeconds: 10
+            timeoutSeconds: 1
+          readinessProbe:
+            exec:
+              command:
+              - ls
+            initialDelaySeconds: 5
+          volumeMounts:
+            - name: locustfiles
+              mountPath: /opt/locust/scripts
+          ports:
+            - containerPort: 8089
+              name: locust-http
+            - containerPort: 5557
+              name: master-port
+            - containerPort: 5558
+              name: master-port-2
+          envFrom:
+            - configMapRef:
+                name: locust-master-env-config
+      volumes:
+        - name: locustfiles
+          configMap:
+            name: locustfile-config
+            defaultMode: 0777
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: locust-worker
+  labels:
+    app: locust
+spec:
+  selector:
+    matchLabels:
+      app: locust-worker
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: locust-worker
+    spec:
+      containers:
+        - name: locust-worker
+          image: gcr.io/sauce-gcr--hawk/locust
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: locustfiles
+              mountPath: /opt/locust/scripts
+          envFrom:
+            - configMapRef:
+                name: locust-worker-env-config
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: "app"
+                    operator: In
+                    values:
+                      - ag-master
+              topologyKey: "kubernetes.io/hostname"
+      volumes:
+        - name: locustfiles
+          configMap:
+            name: locustfile-config
+            defaultMode: 0777

@@ -1,0 +1,52 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: dev
+commonLabels:
+  environment: dev
+resources:
+  - ../../base
+  - namespace.yaml
+configMapGenerator:
+  - name: locust-master-env-config
+    envs:
+      - master.env
+  - name: locust-worker-env-config
+    envs:
+      - worker.env
+replicas:
+  - name: locust-worker
+    count: 0 # kubectl -n dev scale deployment locust-worker --replicas <num>
+patches:
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: locust-master
+    patch: |-
+      - op: add
+        path: /spec/template/spec/affinity
+        value: 
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                  - key: cloud.google.com/gke-nodepool
+                    operator: In
+                    values:
+                      - dev
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: locust-worker
+    patch: |-
+      - op: add
+        path: /spec/template/spec/affinity/nodeAffinity
+        value: 
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: cloud.google.com/gke-nodepool
+                  operator: In
+                  values:
+                    - dev

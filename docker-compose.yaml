@@ -1,0 +1,39 @@
+version: "3.8"
+services:
+  master:
+    build:
+      context: .
+      dockerfile: dist/Dockerfile
+    ports:
+      - 9090:8089
+      - 5557
+      - 5558
+    volumes:
+      - ./dist/base/scripts/locustfile.py:/home/locust/locustfile.py
+    environment:
+      PORT: 8089
+      TARGET_URL: http://localhost:5000 # http://kubernetes.docker.internal:32248
+      LOCUSTFILE_PATH: /home/locust/locustfile.py
+      # ARANGO_URL: http://kubernetes.docker.internal:32248
+      MODE: master
+    command:
+      - "-L DEBUG"
+  worker:
+    image: gcr.io/sauce-gcr--hawk/locust
+    build:
+      context: .
+      dockerfile: dist/Dockerfile
+    volumes:
+      - ./dist/base/scripts/locustfile.py:/home/locust/locustfile.py
+    ports:
+      - 5000:5000
+    environment:
+      PORT: 5557
+      TARGET_URL: master
+      LOCUSTFILE_PATH: /home/locust/locustfile.py
+      # ARANGO_URL: http://kubernetes.docker.internal:32248
+      MODE: worker
+    command:
+      - "-L DEBUG"
+    links:
+      - master
